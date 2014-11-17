@@ -31,6 +31,7 @@
 #include <rtems/rtems_bsdnet.h>
 #include <rtems/imfs.h>
 #include <rtems/shell.h>
+#include <rtems/tftp.h>
 #include <librtemsNfs.h>
 #include <bsp.h>
 
@@ -218,40 +219,34 @@ nfsMount(char *uidhost, char *path, char *mntpoint)
 static void
 initialize_remote_filesystem(char **argv, int hasLocalFilesystem)
 {
-#ifdef OMIT_NFS_SUPPORT
-    printf ("***** Initializing TFTP *****\n");
-#if __RTEMS_MAJOR__>4 || \
-   (__RTEMS_MAJOR__==4 && __RTEMS_MINOR__>9) || \
-   (__RTEMS_MAJOR__==4 && __RTEMS_MINOR__==9 && __RTEMS_REVISION__==99)
-    mount_and_make_target_path(NULL,
-                               "/TFTP",
-                               RTEMS_FILESYSTEM_TYPE_TFTPFS,
-                               RTEMS_FILESYSTEM_READ_WRITE,
-                               NULL);
-#else
-    rtems_bsdnet_initialize_tftp_filesystem ();
-#endif
-    if (!hasLocalFilesystem) {
-        char *path;
-        int pathsize = 200;
-        int l;
-
-        path = mustMalloc(pathsize, "Command path name ");
-        strcpy (path, "/TFTP/BOOTP_HOST/epics/");
-        l = strlen (path);
-        if (gethostname (&path[l], pathsize - l - 10) || (path[l] == '\0'))
-        {
-            LogFatal ("Can't get host name");
-        }
-        strcat (path, "/st.cmd");
-        argv[1] = path;
-    }
-#else
+#ifndef OMIT_NFS_SUPPORT
     char *server_name;
     char *server_path;
     char *mount_point;
     char *cp;
     int l = 0;
+#endif
+
+    printf ("***** Initializing TFTP *****\n");
+#if __RTEMS_MAJOR__>4 || \
+   (__RTEMS_MAJOR__==4 && __RTEMS_MINOR__>9) || \
+   (__RTEMS_MAJOR__==4 && __RTEMS_MINOR__==9 && __RTEMS_REVISION__==99)
+    if(mount_and_make_target_path("BOOTP_HOST:/",
+                               "/TFTP/BOOTP_HOST",
+                               RTEMS_FILESYSTEM_TYPE_TFTPFS,
+                               RTEMS_FILESYSTEM_READ_WRITE,
+                               NULL)) {
+        perror("mount TFTP");
+    }
+#else
+    rtems_bsdnet_initialize_tftp_filesystem ();
+#endif
+
+    if(rtems_bsdnet_bootp_cmdline && strncmp("/TFTP", rtems_bsdnet_bootp_cmdline, 4)==0) {
+        argv[1] = rtems_bsdnet_bootp_cmdline;
+        printf("Boot from TFTP\n");
+        return;
+    }
 
     printf ("***** Initializing NFS *****\n");
     NFS_INIT
@@ -271,9 +266,10 @@ initialize_remote_filesystem(char **argv, int hasLocalFilesystem)
         argv[1] = rtems_bsdnet_bootp_cmdline;
     }
     else if (hasLocalFilesystem) {
+        printk("Using Local FS\n");
         return;
     }
-    else {
+    else if (rtems_bsdnet_bootp_cmdline) {
         /*
          * Use first component of nvram/bootp command line pathname
          * to set up initial NFS mount.  A "/tftpboot/" is prepended
@@ -342,10 +338,30 @@ initialize_remote_filesystem(char **argv, int hasLocalFilesystem)
             argv[1] = abspath;
         }
     }
-    errlogPrintf("nfsMount(\"%s\", \"%s\", \"%s\")\n",
-                 server_name, server_path, mount_point);
-    nfsMount(server_name, server_path, mount_point);
-#endif
+    if(server_name && server_path && mount_point) {
+        int ret = nfsMount(server_name, server_path, mount_point);
+        printk("nfsMount(\"%s\", \"%s\", \"%s\") -> %d\n", server_name, server_path, mount_point, ret);
+
+    } else if (!hasLocalFilesystem) {
+        char *path;
+        int pathsize = 200;
+        int l;
+
+        printk("No NFS configuration found.  Falling back to TFTP\n");
+
+        path = mustMalloc(pathsize, "Command path name ");
+        strcpy (path, "/TFTP/BOOTP_HOST/epics/");
+        l = strlen (path);
+        if (gethostname (&path[l], pathsize - l - 10) || (path[l] == '\0'))
+        {
+            LogFatal ("Can't get host name");
+        }
+        strcat (path, "/st.cmd");
+        argv[1] = path;
+
+    } else {
+        printk("Local FS\n");
+    }
 }
 
 static
@@ -412,6 +428,7 @@ set_directory (const char *commandline)
     strncpy(directoryPath, cp, l);
     directoryPath[l] = '/';
     directoryPath[l+1] = '\0';
+    printk(" In %s\n", directoryPath);
     if (chdir (directoryPath) < 0)
         LogFatal ("Can't set initial directory(%s): %s\n", directoryPath, strerror(errno));
     else
