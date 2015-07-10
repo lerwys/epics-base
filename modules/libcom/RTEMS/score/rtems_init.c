@@ -37,6 +37,10 @@
 #include <bsp.h>
 
 #include "epicsVersion.h"
+#ifdef USE_GDBSTUB
+#include <rtems-gdb-stub.h>
+#endif
+
 #include "epicsThread.h"
 #include "epicsTime.h"
 #include "epicsExit.h"
@@ -548,6 +552,24 @@ static void zonesetCallFunc(const iocshArgBuf *args)
     zoneset(args[0].sval);
 }
 
+#ifdef USE_GDBSTUB
+static const iocshArg gdbstartArg0 = { "prio",iocshArgInt};
+static const iocshArg gdbstartArg1 = { "ttyName",iocshArgString};
+static const iocshArg * const gdbstartArgs[3] = {&gdbstartArg0,&gdbstartArg1};
+static const iocshFuncDef gdbstartFuncDef = {"rtems_gdb_start",2,gdbstartArgs};
+static void gdbstartCallFunc(const iocshArgBuf *args)
+{
+    rtems_gdb_start(args[0].ival, args->sval);
+}
+
+static const iocshArg gdbstopArg0 = { "override",iocshArgInt};
+static const iocshArg * const gdbstopArgs[3] = {&gdbstopArg0};
+static const iocshFuncDef gdbstopFuncDef = {"rtems_gdb_stop",1,gdbstopArgs};
+static void gdbstopCallFunc(const iocshArgBuf *args)
+{
+    rtems_gdb_stop(args[0].ival);
+}
+#endif /* USE_GDBSTUB */
 
 // see qemu_idle.c
 extern void qemu_idle_register(void);
@@ -560,6 +582,10 @@ static void iocshRegisterRTEMS (void)
     iocshRegister(&heapSpaceFuncDef, heapSpaceCallFunc);
 #ifndef OMIT_NFS_SUPPORT
     iocshRegister(&nfsMountFuncDef, nfsMountCallFunc);
+#endif
+#ifdef USE_GDBSTUB
+    iocshRegister(&gdbstartFuncDef, gdbstartCallFunc);
+    iocshRegister(&gdbstopFuncDef, gdbstopCallFunc);
 #endif
     iocshRegister(&zonesetFuncDef, &zonesetCallFunc);
     iocshRegister(&rtshellFuncDef, &rtshellCallFunc);

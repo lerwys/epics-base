@@ -20,9 +20,14 @@ INC += epicsRtemsInitHooks.h
 INC += epicsMemFs.h
 INC += epicsNtp.h
 
+ifeq ($(USE_RTEMS_GDBSTUB_$(T_A)),YES)
+rtems_init_CPPFLAGS += -DUSE_GDBSTUB
+endif
+
 ifeq ($(RTEMS_QEMU_FIXUPS),YES)
 rtems_init_CPPFLAGS += -DQEMU_FIXUPS
 endif
+
 rtemsCom_SRCS += rtems_init.c
 rtemsCom_SRCS += rtems_config.c
 rtemsCom_SRCS += rtems_netconfig.c
