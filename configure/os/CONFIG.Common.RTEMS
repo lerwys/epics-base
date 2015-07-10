@@ -94,6 +94,12 @@ OPT_CXXFLAGS_NO  = $(CFLAGS_DEBUG_V)
 
 MODEXT=.obj
 
+GDBSTUB_YES = -lrtems-gdb-stub -lcexp -ltecla_r -lspencer_regexp -lpmbfd -lpmelf
+
+ifneq ($(T_A),)
+USE_RTEMS_GDBSTUB_$(T_A) ?= $(USE_RTEMS_GDBSTUB)
+endif
+
 #--------------------------------------------------
 # operating system class (include/os/<os_class>)
 OS_CLASS = RTEMS
@@ -116,6 +122,7 @@ OP_SYS_LDLIBS_score_NET_no = -lnfs
 OP_SYS_LDLIBS += -lrtemsCom -lCom
 OP_SYS_LDLIBS += $(OP_SYS_LDLIBS_$(OS_API)_NET_$(RTEMS_HAS_NETWORKING))
 OP_SYS_LDLIBS += -lrtemscpu -lc -lm
+OP_SYS_LDLIBS += $(GDBSTUB_$(USE_RTEMS_GDBSTUB_$(T_A)))
 
 OP_SYS_LDFLAGS_posix = -u POSIX_Init
 OP_SYS_LDFLAGS_score = -u Init \
@@ -137,7 +144,7 @@ GESYS_LIBS += -lnfs -ltelnetd -lrtems-gdb-stub
 
 # While not part of the Generic Image it provides symbols which
 # would conflict.
-GESYS_LIBS += -lrtemsCom
+GESYS_LIBS += -lrtemsCom $(GDBSTUB_YES)
 
 #--------------------------------------------------
 # Options for building GeSys loadable objects
