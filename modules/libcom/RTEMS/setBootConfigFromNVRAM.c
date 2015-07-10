@@ -29,6 +29,7 @@
 char *env_nfsServer;
 char *env_nfsPath;
 char *env_nfsMountPoint;
+char *env_rtems_gdb_stub = NULL;
 
 extern char* rtems_bsdnet_bootp_cmdline;
 /*
@@ -227,6 +228,7 @@ setBootConfigFromNVRAM(void)
         rtems_bsdnet_config.ntp_server[0] = rtems_bsdnet_bootp_server_name;
     if ((cp = gev("epics-tz", nvp)) != NULL)
         epicsEnvSet("TZ", cp);
+    env_rtems_gdb_stub = gev("gdb-start", nvp);
 }
 
 #elif defined(HAVE_PPCBUG)
@@ -368,6 +370,7 @@ setBootConfigFromNVRAM(void)
     splitNfsMountPath(env("NFSMOUNT", NULL));
     if ((cp1 = env("TZ", NULL)) != NULL)
         epicsEnvSet("TZ", cp1);
+    env_rtems_gdb_stub = env("GDBSTART", NULL);
 }
 
 #else
