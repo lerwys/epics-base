@@ -24,6 +24,8 @@
 #include <epicsString.h>
 #include <envDefs.h>
 
+#include <osiSock.h>
+
 char *env_nfsServer;
 char *env_nfsPath;
 char *env_nfsMountPoint;
@@ -190,6 +192,13 @@ setBootConfigFromNVRAM(void)
     mot_script_boot = gev("mot-script-boot", nvp);
     if ((rtems_bsdnet_bootp_server_name = gev("mot-/dev/enet0-sipa", nvp)) == NULL)
         rtems_bsdnet_bootp_server_name = motScriptParm(mot_script_boot, 's');
+
+    {
+        struct sockaddr_in ain;
+        if(!aToIPAddr(rtems_bsdnet_bootp_server_name, 0, &ain))
+            rtems_bsdnet_bootp_server_address = ain.sin_addr;
+    }
+
     if ((rtems_bsdnet_config.gateway = gev("mot-/dev/enet0-gipa", nvp)) == NULL)
         rtems_bsdnet_config.gateway = motScriptParm(mot_script_boot, 'g');
     if  ((rtems_bsdnet_config.ifconfig->ip_netmask = gev("mot-/dev/enet0-snma", nvp)) == NULL)
