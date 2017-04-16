@@ -1,0 +1,107 @@
+# valgrind suppressions for known false positives for memcheck and helgrind.
+# generally "reachable" leaks from one time initializations kept in global variables.
+# also "races" in atomic primatives
+#   valgrind --suppressions=base.supp <exec> <args...>
+{
+   Assume all Once allocations are really once...
+   Memcheck:Leak
+   match-leak-kinds: definite,possible,reachable
+   ...
+   fun:epicsThreadOnce
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:iocshRegister
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:_ZL12timeRegisterv
+   ...
+}
+{
+   Leaks by design (cf. putenv())
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:epicsEnvSet
+   ...
+}
+{
+   C epicsThread API doesn't join threads.  Threads live at exit appear as leaks
+   Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   fun:pthread_create*
+   fun:epicsThreadCreate
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:scanInit
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:callbackInit
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:db_init_events
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:dbCaLinkInitImpl
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:dbBkptInit
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:dbmfInit
+   ...
+}
+{
+   One time initialization
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:testdbPrepare
+   ...
+}
+{
+   Atomic set
+   Helgrind:Race
+   fun:epicsAtomicSetIntT
+   ...
+}
