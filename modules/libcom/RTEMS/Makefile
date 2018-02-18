@@ -32,6 +32,7 @@ rtemsCom_SRCS += epicsRtemsInitHookPre.c
 rtemsCom_SRCS += epicsRtemsInitHookPost.c
 rtemsCom_SRCS += epicsMemFs.c
 rtemsCom_SRCS += epicsNtp.c
+rtemsCom_SRCS += qemu_idle.c
 
 ifeq ($(RTEMS_TARGET_CPU),i386)
 rtemsCom_SRCS += ne2kpci.c
