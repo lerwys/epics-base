@@ -30,6 +30,7 @@
 #include <rtems/stackchk.h>
 #include <rtems/rtems_bsdnet.h>
 #include <rtems/imfs.h>
+#include <rtems/shell.h>
 #include <librtemsNfs.h>
 #include <bsp.h>
 
@@ -423,6 +424,30 @@ set_directory (const char *commandline)
  *                         RTEMS/EPICS COMMANDS                        *
  ***********************************************************************
  */
+
+static const iocshArg rtshellArg0 = { "cmd",iocshArgString};
+static const iocshArg rtshellArg1 = { "args",iocshArgArgv};
+static const iocshArg * const rtshellArgs[2] = {&rtshellArg0, &rtshellArg1};
+static const iocshFuncDef rtshellFuncDef = {"rt",2,rtshellArgs};
+static void rtshellCallFunc(const iocshArgBuf *args)
+{
+    rtems_shell_cmd_t *cmd = rtems_shell_lookup_cmd(args[0].sval);
+    int ret;
+
+    if(!cmd) {
+        fprintf(stderr, "ERR: No such command\n");
+
+    } else {
+        fflush(stdout);
+        fflush(stderr);
+        ret = (*cmd->command)(args[1].aval.ac, args[1].aval.av);
+        fflush(stdout);
+        fflush(stderr);
+        if(ret)
+            fprintf(stderr, "ERR: %d\n", ret);
+    }
+}
+
 /*
  * RTEMS status
  */
@@ -519,7 +544,15 @@ static void iocshRegisterRTEMS (void)
     iocshRegister(&nfsMountFuncDef, nfsMountCallFunc);
 #endif
     iocshRegister(&zonesetFuncDef, &zonesetCallFunc);
+    iocshRegister(&rtshellFuncDef, &rtshellCallFunc);
     qemu_idle_register();
+#if RTEMS_VERSION_INT<VERSION_INT(4,11,0,0)
+    void rtems_shell_initialize_command_set(void);
+    rtems_shell_initialize_command_set();
+#else
+    // from at least RTEMS 5
+    rtems_shell_init_environment();
+#endif
 }
 
 /*
@@ -719,3 +752,18 @@ void bsp_cleanup(void)
 #endif /* QEMU_FIXUPS */
 
 int cexpdebug __attribute__((weak));
+
+#define CONFIGURE_SHELL_COMMANDS_INIT
+#define CONFIGURE_SHELL_COMMANDS_ALL
+#define CONFIGURE_SHELL_COMMANDS_ALL_NETWORKING
+// exclude commands which won't work right with our configuration
+#define CONFIGURE_SHELL_NO_COMMAND_EXIT
+#define CONFIGURE_SHELL_NO_COMMAND_LOGOFF
+// exclude commands which unnecessarily pull in block driver
+#define CONFIGURE_SHELL_NO_COMMAND_MSDOSFMT
+#define CONFIGURE_SHELL_NO_COMMAND_BLKSYNC
+#define CONFIGURE_SHELL_NO_COMMAND_MKRFS
+#define CONFIGURE_SHELL_NO_COMMAND_DEBUGRFS
+#define CONFIGURE_SHELL_NO_COMMAND_FDISK
+
+#include <rtems/shellconfig.h>
