@@ -67,6 +67,12 @@ rtems_task Init (rtems_task_argument argument);
 #define CONFIGURE_APPLICATION_NEEDS_RTC_DRIVER
 #endif
 
+/* Uncomment to enable runtime stack checker.
+ * Adds extra overhead to task creation/destruction.
+ * Detects stack overflow on task exit.
+ * Enables the "stackuse" monitor command to show actual usage.
+ */
+//#define STACK_CHECKER_ON
 
 #include <bsp.h>
 #include <rtems/confdefs.h>
