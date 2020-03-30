@@ -20,6 +20,7 @@ struct VFieldType;
 typedef struct dbAddr {
         struct dbCommon *precord;   /* address of record                     */
         void    *pfield;            /* address of field                      */
+        void    *compare;           /* use only for equality/order test between instances */
         struct dbFldDes *pfldDes;   /* address of struct fldDes              */
         const ELLLIST* vfields;     /* list of VFieldTypeNode, vtypes to try with rset::get/put_vfield  */
         long    no_elements;        /* number of elements (arrays)           */
