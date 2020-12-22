@@ -29,6 +29,7 @@
 #include <rtems/error.h>
 #include <rtems/stackchk.h>
 #include <rtems/rtems_bsdnet.h>
+#include <rtems/bsdnet/servers.h>
 #include <rtems/imfs.h>
 #include <rtems/shell.h>
 #include <rtems/tftp.h>
@@ -718,6 +719,7 @@ Init (rtems_task_argument ignored)
             epicsEnvSet("TZ", tzp);
     }
     tzset();
+    printf("***** Initial Time Sync with 0x%08x *****\n", (unsigned)ntohl(rtems_bsdnet_ntpserver->s_addr));
     osdTimeRegister();
 
     /*
