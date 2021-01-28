@@ -23,6 +23,7 @@
 #include "logClient.h"
 #include "errlog.h"
 #include "taskwd.h"
+#include "osiFileName.h"
 #include "registry.h"
 #include "epicsGeneralTime.h"
 #include "libComRegister.h"
@@ -117,12 +118,12 @@ static const iocshFuncDef pwdFuncDef = {"pwd", 0, 0,
                                         "Print name of current/working directory\n"};
 static void pwdCallFunc (const iocshArgBuf *args)
 {
-    char buf[1024];
-    char *pwd = getcwd ( buf, sizeof(buf) );
+    char *pwd = epicsPathAllocCWD();
     if ( pwd ) {
         buf[sizeof(buf)-1u] = '\0';
         printf ( "%s\n", pwd );
     }
+    free(pwd);
 }
 
 /* epicsEnvSet */
