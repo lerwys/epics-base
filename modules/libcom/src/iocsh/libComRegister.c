@@ -10,6 +10,7 @@
 \*************************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "iocsh.h"
 #include "asLib.h"
@@ -20,6 +21,7 @@
 #include "epicsMutex.h"
 #include "envDefs.h"
 #include "osiUnistd.h"
+#include "postfix.h"
 #include "logClient.h"
 #include "errlog.h"
 #include "taskwd.h"
@@ -143,6 +145,36 @@ static void epicsEnvSetCallFunc(const iocshArgBuf *args)
     }
     if (value == NULL) {
         fprintf(stderr, "Missing environment variable value argument.\n");
+        return;
+    }
+    if(strncmp(value, ":=", 2)==0) {
+        char *expr = NULL;
+        short err = 0;
+        double args[CALCPERFORM_NARGS];
+        double result = 0.0;
+
+        memset(args, 0, sizeof(args));
+
+        value += 2; /* skip past := */
+
+        expr = malloc(INFIX_TO_POSTFIX_SIZE(strlen(value)+1));
+        if(!expr) {
+            fprintf(stderr, "No memory.\n");
+            iocshSetError(1);
+
+        } else if(postfix(value, expr, &err) || calcPerform(args, &result, expr)) {
+            fprintf(stderr, "Calc error: %s\n", err ? calcErrorStr(err) : "exec failed");
+            iocshSetError(1);
+
+        } else {
+            char fbuf[32];
+
+            epicsSnprintf(fbuf, sizeof(fbuf)-1, "%f", result);
+            fbuf[sizeof(fbuf)-1] = '\0';
+
+            epicsEnvSet(name, fbuf);
+        }
+        free(expr);
         return;
     }
     epicsEnvSet (name, value);
