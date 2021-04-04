@@ -28,6 +28,7 @@
 #include "osiFileName.h"
 #include "registry.h"
 #include "epicsGeneralTime.h"
+#include "freeList.h"
 #include "libComRegister.h"
 
 /* Register the PWD environment variable when the cd IOC shell function is
@@ -500,7 +501,11 @@ static void installLastResortEventProviderCallFunc(const iocshArgBuf *args)
     installLastResortEventProvider();
 }
 
-static iocshVarDef asCheckClientIPDef[] = { { "asCheckClientIP", iocshArgInt, 0 }, { NULL, iocshArgInt, NULL } };
+static iocshVarDef comDefs[] = {
+    { "asCheckClientIP", iocshArgInt, 0 },
+    { "freeListBypass", iocshArgInt, 0 },
+    { NULL, iocshArgInt, NULL }
+};
 
 void epicsStdCall libComRegister(void)
 {
@@ -537,6 +542,7 @@ void epicsStdCall libComRegister(void)
     iocshRegister(&generalTimeReportFuncDef,generalTimeReportCallFunc);
     iocshRegister(&installLastResortEventProviderFuncDef, installLastResortEventProviderCallFunc);
 
-    asCheckClientIPDef[0].pval = &asCheckClientIP;
-    iocshRegisterVariable(asCheckClientIPDef);
+    comDefs[0].pval = &asCheckClientIP;
+    comDefs[1].pval = &freeListBypass;
+    iocshRegisterVariable(comDefs);
 }
