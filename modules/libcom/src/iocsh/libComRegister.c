@@ -123,7 +123,6 @@ static void pwdCallFunc (const iocshArgBuf *args)
 {
     char *pwd = epicsPathAllocCWD();
     if ( pwd ) {
-        buf[sizeof(buf)-1u] = '\0';
         printf ( "%s\n", pwd );
     }
     free(pwd);
