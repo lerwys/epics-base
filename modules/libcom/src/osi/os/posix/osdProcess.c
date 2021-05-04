@@ -110,17 +110,18 @@ LIBCOM_API osiSpawnDetachedProcessReturn epicsStdCall osiSpawnDetachedProcess
     /* This is executed only by the new child process.
      * Since we may be called from a library, we don't assume that
      * all other code has set properly set FD_CLOEXEC.
-     * Close all open files except for STDIO, so they will not
-     * be inherited by the new program.
+     * Ensure that only STDIO FDs will be inherited by the new process.
      */
     {
         int fd, maxfd = sysconf ( _SC_OPEN_MAX );
         for ( fd = 0; fd <= maxfd; fd++ ) {
+            /* leave open stdin/out/err */
             if (fd==STDIN_FILENO) continue;
             if (fd==STDOUT_FILENO) continue;
             if (fd==STDERR_FILENO) continue;
             /* pipe to our parent will be closed automatically via FD_CLOEXEC */
             if (fd==fds[1]) continue;
+            /* close others */
             close (fd);
         }
     }
