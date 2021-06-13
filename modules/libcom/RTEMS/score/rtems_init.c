@@ -155,32 +155,47 @@ epicsRtemsMountLocalFilesystem(char **argv)
 static int
 initialize_local_filesystem(char **argv)
 {
+#if 0
+    // uC5282 only
     extern char _DownloadLocation[] __attribute__((weak));
     extern char _FlashBase[] __attribute__((weak));
     extern char _FlashSize[]  __attribute__((weak));
+    extern char _edata[];
+    int imageValid = _FlashSize && (_DownloadLocation || _FlashBase;
+    char *imageBase = _FlashBase + _edata - _DownloadLocation;
+    size_t imageSize = (size_t)_FlashSize - (_edata - _DownloadLocation);
+#else
+    extern char _FSImageLocation[] __attribute__((weak));
+    extern char _FSImageEnd[] __attribute__((weak));
+    int imageValid = _FSImageLocation && _FSImageEnd;
+    char *imageBase = _FSImageLocation;
+    size_t imageSize = _FSImageEnd-_FSImageLocation;
+#endif
+    const char* cmdline = rtems_bsdnet_bootp_cmdline ? rtems_bsdnet_bootp_cmdline : "./st.cmd";
+    argv[0] = rtems_bsdnet_bootp_boot_file_name ? rtems_bsdnet_bootp_boot_file_name : "epics.boot";
 
-    argv[0] = rtems_bsdnet_bootp_boot_file_name;
     if (epicsRtemsMountLocalFilesystem(argv)==0) {
         return 1; /* FS setup successful */
-    } else if (_FlashSize && (_DownloadLocation || _FlashBase)) {
-        extern char _edata[];
-        size_t flashIndex = _edata - _DownloadLocation;
-        char *header = _FlashBase + flashIndex;
 
-        if (memcmp(header + 257, "ustar  ", 8) == 0) {
+    } else if (imageBase) {
+        if (memcmp(imageBase + 257, "ustar  ", 8) == 0) {
             int fd;
             printf ("***** Unpack in-memory file system (IMFS) *****\n");
-            if (rtems_tarfs_load("/", (unsigned char *)header, (size_t)_FlashSize - flashIndex) != 0) {
+            if (rtems_tarfs_load("/", (unsigned char *)imageBase, imageSize) != 0) {
                 printf("Can't unpack tar filesystem\n");
                 return 0;
             }
-            if ((fd = open(rtems_bsdnet_bootp_cmdline, 0)) >= 0) {
+            if ((fd = open(cmdline, 0)) >= 0) {
                 close(fd);
-                printf ("***** Found startup script (%s) in IMFS *****\n", rtems_bsdnet_bootp_cmdline);
-                argv[1] = rtems_bsdnet_bootp_cmdline;
+                printf ("***** Found startup script (%s) in IMFS *****\n", cmdline);
+                argv[1] = cmdline;
                 return 1;
             }
-            printf ("***** Startup script (%s) not in IMFS *****\n", rtems_bsdnet_bootp_cmdline);
+            printf ("***** Startup script (%s) not in IMFS *****\n", cmdline);
+            return 1; /* FS setup successful */
+
+        } else {
+            printf ("***** IMFS image @%p is not a ustar, ignoring *****\n", imageBase);
         }
     }
     return 0;
