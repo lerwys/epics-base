@@ -32,7 +32,7 @@ env:
     SETUP_PATH: .ci-local:.ci
     BASE: SELF
     EPICS_TEST_IMPRECISE_TIMING: YES
-    EPICS_TEST_TIMEOUT: 1200 # 20 min (RTEMS is slowest)
+    EPICS_TEST_TIMEOUT: 1200 # 20 min (RTEMS5/libbsd is slowest)
 
 jobs:
   native:
@@ -86,7 +86,6 @@ jobs:
             configuration: default
             rtems: "5"
             rtems_target: RTEMS-pc686-qemu
-            test: NO
             name: "Ub-20 gcc-9 + RT-5.1 pc686"
 
           - os: ubuntu-20.04
@@ -272,7 +271,7 @@ jobs:
     - name: Build main module
       run: python .ci/cue.py build
     - name: Run main module tests
-      run: python .ci/cue.py -T 20M test
+      run: python .ci/cue.py -T 30M test
     - name: Upload tapfiles Artifact
       if: ${{ always() }}
       uses: actions/upload-artifact@v2
