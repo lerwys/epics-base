@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/syslog.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
@@ -633,6 +634,17 @@ static void zonesetCallFunc(const iocshArgBuf *args)
     zoneset(args[0].sval);
 }
 
+#ifndef RTEMS_LEGACY_STACK
+static int bsd_log_level = LOG_WARNING;
+
+static int bsd_log_to_erl(int level, const char *fmt, va_list ap)
+{
+    int ret = 0;
+    if(level<=bsd_log_level)
+        ret = errlogVprintf(fmt, ap);
+    return ret;
+}
+#endif // RTEMS_LEGACY_STACK
 
 /*
  * Register RTEMS-specific commands
@@ -977,9 +989,6 @@ POSIX_Init ( void *argument __attribute__((unused)))
     /* Let other tasks run to complete background work */
     default_network_set_self_prio(RTEMS_MAXIMUM_PRIORITY - 1U);
 
-    /* supress all output from bsd network initialization */ 
-    rtems_bsd_set_vprintf_handler(rtems_bsd_vprintf_handler_mute);
-
     sc = rtems_bsd_initialize();
     assert(sc == RTEMS_SUCCESSFUL);
 
@@ -1066,9 +1075,6 @@ POSIX_Init ( void *argument __attribute__((unused)))
     rtems_bsdnet_synchronize_ntp (0, 0);
 #endif // not RTEMS_LEGACY_STACK
 
-    /* show messages from network after initialization ? good idea? */
-    //rtems_bsd_set_vprintf_handler(bsd_vprintf_handler_old);
-
     printf("\n***** Setting up file system *****\n");
     initialize_remote_filesystem(argv, initialize_local_filesystem(argv));
     fixup_hosts();
@@ -1112,6 +1118,12 @@ POSIX_Init ( void *argument __attribute__((unused)))
     atexit(exitHandler);
     errlogFlush();
     printf ("***** Starting EPICS application *****\n");
+
+
+#ifndef RTEMS_LEGACY_STACK
+    // switch OS to async logging
+    rtems_bsd_set_vprintf_handler(bsd_log_to_erl);
+#endif
 
 #if 0
 // Start an rtems shell before main, for debugging RTEMS system issues
