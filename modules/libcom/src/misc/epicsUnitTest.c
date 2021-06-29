@@ -28,6 +28,10 @@
 #  endif
 #endif
 
+#ifdef __rtems__
+#  include <syslog.h>
+#endif
+
 #include "epicsThread.h"
 #include "epicsEvent.h"
 #include "epicsStdlib.h"
@@ -120,6 +124,13 @@ static void testOnce(void *dummy) {
     double timeout = 0.0;
     testLock = epicsMutexMustCreate();
     perlHarness = (getenv("HARNESS_ACTIVE") != NULL);
+#ifdef __rtems__
+    // syslog() on RTEMS prints to stdout, which will interfere with test output.
+    // setlogmask() ignores empty mask, so must allow at least one level.
+    (void)setlogmask(LOG_MASK(LOG_CRIT));
+    printf("# mask syslog() output\n");
+#endif
+
 #ifdef _WIN32
 #ifdef HAVE_SETERROMODE
     /* SEM_FAILCRITICALERRORS - Don't display modal dialog
